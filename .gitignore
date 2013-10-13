@@ -1,1 +1,5 @@
 *.txt
+*.bak
+bs4
+requests
+python3

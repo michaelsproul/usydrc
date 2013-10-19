@@ -1,5 +1,6 @@
 *.txt
 *.bak
+*.pyc
 bs4
 requests
 python3

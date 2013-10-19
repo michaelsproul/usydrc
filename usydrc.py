@@ -10,11 +10,11 @@ from datetime import date, datetime
 from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
 
-login_url = "https://wasm.usyd.edu.au/login.cgi"
-deg_id_url = "https://ssa.usyd.edu.au/ssa/examresults/courseselect.jsp"
-results_url = "https://ssa.usyd.edu.au/ssa/examresults/courseresults.jsp"
+LOGIN_URL = "https://wasm.usyd.edu.au/login.cgi"
+DEG_ID_URL = "https://ssa.usyd.edu.au/ssa/examresults/courseselect.jsp"
+RESULTS_URL = "https://ssa.usyd.edu.au/ssa/examresults/courseresults.jsp"
 
-login_data = {
+LOGIN_DATA = {
 	'appRealm':'usyd',
 	'appID':'ssa-flexsis',
 	'Submit':'Log%20in',
@@ -24,31 +24,36 @@ login_data = {
 # Typical results block CSS (the *only* means of identifying the results block...)
 results_css = "border-collapse: collapse; border: 1px #000065;width:100%; margin-top:0px; margin-bottom:5px; padding:2px;"
 
-def auth_setup(username, password):
-	"Add a username and password to the HTTP POST data."
-	login_data['credential_0'] = username
-	login_data['credential_1'] = password
+def new_login_data(username, password, url):
+	"Create an HTTP data block for an authenticated request."
+	data = {i: LOGIN_DATA[i] for i in LOGIN_DATA}
+	data['credential_0'] = username
+	data['credential_1'] = password
+	data['destURL'] = url
+	return data
 
 
-def get_degree_id():
+def get_degree_id(username, password):
 	"Fetch the ID of the user's degree."
-	login_data['destURL'] = deg_id_url
-	r = requests.post(login_url, data=login_data, allow_redirects=True)
-	
+	login_data = new_login_data(username, password, DEG_ID_URL)
+	r = requests.post(LOGIN_URL, data=login_data, allow_redirects=True)
+
 	if r.status_code >= 400:
 		return None
-	
 
 	soup = BeautifulSoup(r.text)
 	link = soup.find('a', href=re.compile("courseresults*"))
+	if link == None:
+		return None
 	id = link['href'][-4:]
 	return int(id)
 
 
-def get_results(deg_id):
+def get_results_page(username, password, deg_id):
 	"Get the results page HTML."
-	login_data['destURL'] = results_url + "?degreeid=%d" % deg_id
-	r = requests.post(login_url, data=login_data, allow_redirects=True)
+	url = RESULTS_URL + "?degreeid=%d" % deg_id
+	login_data = new_login_data(username, password, url)
+	r = requests.post(LOGIN_URL, data=login_data, allow_redirects=True)
 
 	if r.status_code < 400:
 		return r.text
@@ -66,80 +71,83 @@ def get_semester():
 		return 2
 
 
-def interpret(g_username, g_password, page, semester=None):
-	"Interpret the downloaded results page and act accordingly."
-	soup = BeautifulSoup(page)
+def diff_results(new, old):
+	"Compare two sets of results and extract interesting changes."
+	interesting = []
 
-	# Find the block of most recent results
+	# Look for unseen results
+	for r in new:
+		if r not in old and r['mark'] != None:
+			interesting.append(r)
+
+	return interesting
+
+
+def extract_results(page, semester=None):
+	"""Extract a set of results from a downloaded SSA page.
+
+	The semester is guessed if none is provided.
+	"""
 	if semester == None:
 		semester = get_semester()
+	
+	# Find the block of most recent results
+	soup = BeautifulSoup(page)	
 	result_block = soup.find_all(style=results_css)[semester - 1]
 
 	if type(result_block) != bs4.element.Tag:
 		print "Error parsing results page."
-		return
+		return []
 
 	# Get a list in the form [MATH, 2969, Graph Theory, 74.0, Credit..]
 	raw_results = result_block.find_all('td', 'instructions')
 
 	# Convert each subject into a sensible dictionary
-	new_results = []
+	results = []
 	nsubjects = len(raw_results)//5
 	for i in xrange(nsubjects):
 		result = {}
 		result["subject"] = raw_results[5*i].string
 		result["subject"] += raw_results[5*i + 1].string
-		result["mark"] = raw_results[5*i + 3].string
+		mark = raw_results[5*i + 3].string
+		mark = int(float(mark)) if (mark != None) else None
+		result['mark'] = mark
 		result["grade"] = raw_results[5*i + 4].string
 
 		# If this subject hasn't been dropped, add it
 		if result["grade"] != "Withdrawn":
-			new_results.append(result)
+			results.append(result)
 
-	del raw_results
+	return results
 
-	# Check the previous results file for subjects that already have marks
-	results = []
+
+def read_results(filename='results.txt'):
+	"Read a set of results from disk."
 	try:
-		r_file = open('results.txt', 'r')
+		results = []
+		r_file = open(filename, 'r')
 		if 'Marks are out!' in r_file.readline():
 			for line in r_file:
 				pair = line.split(':')
+				# Look for an 8 character subject code
 				if len(pair[0]) == 8:
 					result = {}
 					result["subject"] = pair[0]
 					pair = pair[1].split(',')
 					result["grade"] = pair[0].strip()
-					result["mark"] = pair[1].strip()
+					result["mark"] = int(pair[1].strip())
 					results.append(result)
 		r_file.close()
+		return results
 	except IOError:
-		pass
-
-	for r in results:
-		if r in new_results:
-			new_results.remove(r)
-
-	# Look for new marks
-	new_marks_out = False
-	for r in new_results:
-		if r["mark"] != None:
-			new_marks_out = True
-			results.append(r)
-
-	# Write results to disk, and email if appropriate
-	write_results(results, new_marks_out)
-
-	if new_marks_out:
-		print "New results are out! Emailing them now!"
-		email_results(g_username, g_password)
+		return []
 
 
-def write_results(results, new_marks_out):
+def write_results(results, new_marks_out, filename='results.txt'):
 	"Write the results (or lack of results) to disk."
 	time_stamp = datetime.now().strftime("%a %d/%m/%y at %I:%M%p")
 
-	r_file = open('results.txt', 'w')
+	r_file = open(filename, 'w')
 	if len(results) == 0:
 		r_file.write("Marks aren't out yet.\n")
 	else:
@@ -149,7 +157,7 @@ def write_results(results, new_marks_out):
 		
 		for r in results:
 			result = "%(subject)s: %(grade)s, " % r
-			result += "%(mark)s\n" % r
+			result += "%(mark)d\n" % r
 			r_file.write(result)
 		
 		r_file.write("\nCheck SSA for more details, ")
@@ -160,7 +168,7 @@ def write_results(results, new_marks_out):
 
 
 def email_results(username, password):
-	"Email the results to and from the gmail account specified."
+	"Email the results to and from the Gmail account specified."
 	r_file = open('results.txt', 'r')
 	me = '%s@gmail.com' % username
 
@@ -177,7 +185,7 @@ def email_results(username, password):
 	server.quit()
 
 
-def get_user_details():
+def request_user_details():
 	"Prompt the user to provide their details via the commandline."
 	print "Sydney Uni login details"
 	print "========================"
@@ -185,10 +193,9 @@ def get_user_details():
 	while True:
 		creds['username'] = raw_input("Uni-key: ")
 		creds['password'] = raw_input("Password: ")
-		auth_setup(creds["username"], creds["password"])
 		print "Validating... "
-		deg_id = get_degree_id()
-		if not deg_id == None:
+		deg_id = get_degree_id(creds['username'], creds['password'])
+		if deg_id != None:
 			creds["deg_id"] = deg_id
 			print "Done!"
 			break
@@ -202,10 +209,10 @@ def get_user_details():
 
 	return creds
 
-def read_user_details():
-	"Obtain the user's details from disk"
+def read_user_details(filename='details.txt'):
+	"Obtain the user's details from disk."
 	creds = {}
-	f = open('details.txt', 'r')
+	f = open(filename, 'r')
 	
 	line = f.readline().split()
 	creds['username'] = line[1]
@@ -223,34 +230,56 @@ def read_user_details():
 	return creds
 
 
-def write_user_details(creds):
+def write_user_details(creds, filename='details.txt'):
 	"Write the user's details to disk."
-	f = open('details.txt', 'w')
+	f = open(filename, 'w')
 	line = "Uni: %(username)s %(password)s %(deg_id)d\n" % creds
 	f.write(line)
 	line = "Gmail: %(g_username)s %(g_password)s\n" % creds
 	f.write(line)
 	f.close()
 
-
-def main():
-	# Read user details from the `details' file if it exists
+def get_user_details():
+	"Get the user's details by whatever means neccessary."
 	if os.path.isfile("details.txt"):
 		creds = read_user_details()
-		auth_setup(creds['username'], creds['password'])
-	
+
 		# Find degree id if missing
 		if creds['deg_id'] == None:
 			print "Working out what degree you're in..."
-			creds['deg_id'] = get_degree_id()
+			deg_id = get_degree_id(creds['username'], creds['password'])
+			if deg_id == None:
+				print "Authentication Failure! Delete details.txt"
+				os.exit(1)
+			creds['deg_id'] = deg_id
 			write_user_details(creds)
 	else:
-		creds = get_user_details()
+		creds = request_user_details()
 		write_user_details(creds)
+	return creds
+
+
+def main():
+	creds = get_user_details()
 
 	print "Downloading the results page..."
-	page = get_results(creds['deg_id'])
-	interpret(creds['g_username'], creds['g_password'], page)
+	page = get_results_page(creds['username'], creds['password'], creds['deg_id'])
+
+	new_results = extract_results(page)
+	old_results = read_results()
+
+	interesting = diff_results(new_results, old_results)
+	new_marks_out = (len(interesting) != 0)
+
+	# Extend the set of old results to contain all results
+	# TODO: Handle *changes* in marks more elegantly
+	old_results.extend(interesting)
+
+	# Store the results and email if appropriate
+	write_results(old_results, new_marks_out)
+	if new_marks_out:
+		print "New results are out! Emailing them now!"
+		email_results(creds['g_username'], creds['g_password'])
 	print "Done."
 
 if __name__ == '__main__':

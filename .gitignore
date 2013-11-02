@@ -3,4 +3,4 @@
 *.pyc
 bs4
 requests
-python3
+setup.py

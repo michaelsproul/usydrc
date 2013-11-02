@@ -59,6 +59,7 @@ def get_results_page(username, password, deg_id):
 		return r.text
 	else:
 		print "Error fetching results, try deleting your details file."
+		print "If that doesn't work, check whether the results web page is down."
 		r.raise_for_status()
 
 
@@ -93,7 +94,13 @@ def extract_results(page, semester=None):
 	
 	# Find the block of most recent results
 	soup = BeautifulSoup(page)	
-	result_block = soup.find_all(style=results_css)[semester - 1]
+	result_block = soup.find_all(style=results_css)
+
+	if len(result_block) == 0:
+		print "Is the SSA website down?"
+		return []
+
+	result_block = result_block[semester - 1]
 
 	if type(result_block) != bs4.element.Tag:
 		print "Error parsing results page."

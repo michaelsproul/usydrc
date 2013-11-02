@@ -53,3 +53,9 @@ To run the script automatically on Windows you can create a task using "Task Sch
 Unfortunately, usydrc requires access to your unencrypted passwords in order to access the Sydney Uni website. It keeps them in a file called `details.txt` in the same folder that it runs from. It is recommended that you keep this folder very safe, particularly if you use these passwords for other things. Having a password to login to your computer is highly recommended. If you feel uncomfortable about the security of usydrc, feel free to boycott it. I take no responsibility for your use (or misuse) of this software (sorry it has to be this way, but hey, it ain't all bad).
 
 This limitation also prevented me from making usydrc into a nice shiny website.
+
+## Bugs & Errors ##
+
+I'm fairly sure all my code is bug-free. If you get an error it's likely because something isn't set up correctly, or the SSA website is stuffing up (it does this from time to time). If you need help or you've found a bug, just email me: micsproul (at) gmail.com
+
+If you're using a Mac and manage to get it to work, please let me know what you did (I don't have access to any Macs).

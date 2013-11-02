@@ -1,6 +1,10 @@
 *.txt
 *.bak
 *.pyc
+
 bs4
 requests
+
+releases
+
 setup.py

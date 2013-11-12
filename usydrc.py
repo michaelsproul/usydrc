@@ -7,6 +7,13 @@ import stat
 import bs4
 import requests
 
+HAS_KEYRING = False
+try:
+	import keyring
+	HAS_KEYRING = True
+except ImportError:
+	print "Warning: falling back to insecure password storage."
+
 from datetime import date, datetime
 from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
@@ -259,7 +266,13 @@ def read_user_details(filename='details.txt'):
 	# Read USYD login details
 	line = f.readline().split()
 	creds['username'] = line[1]
-	creds['password'] = line[2]
+
+	# Usyd password
+	if HAS_KEYRING:
+		creds['password'] = keyring.get_password("usydrc", "usyd")
+	else:
+		creds['password'] = line[2]
+
 	if len(line) < 4:
 		creds['deg_id'] = None
 	else:
@@ -268,7 +281,12 @@ def read_user_details(filename='details.txt'):
 	# Read email login details
 	line = f.readline().split()
 	creds['e_username'] = line[1]
-	creds['e_password'] = line[2]
+
+	# Email password
+	if HAS_KEYRING:
+		creds['password'] = keyring.get_password("usydrc", "email")
+	else:
+		creds['e_password'] = line[2]
 
 	# Read the SMTP server to use
 	line = f.readline().split()
@@ -280,6 +298,19 @@ def read_user_details(filename='details.txt'):
 
 def write_user_details(creds, filename='details.txt'):
 	"Write the user's details to disk."
+
+	# If we have keyring available, store the passwords securely then write
+	# dummy values to the file.
+	if HAS_KEYRING:
+		passwords = {"password":creds["password"],
+					"e_password":creds["e_password"]}
+		keyring.set_password("usydrc", "usyd",  creds["password"])
+		keyring.set_password("usydrc", "email", creds["e_password"])
+
+		# Set the dummy values
+		creds["password"] = "KEYRING"
+		creds["e_password"] = "KEYRING"
+
 	f = open(filename, 'w')
 	line = "Uni: %(username)s %(password)s %(deg_id)d\n" % creds
 	f.write(line)
@@ -292,6 +323,11 @@ def write_user_details(creds, filename='details.txt'):
 
 	# Set file permissions so only the user can read & write
 	os.chmod(filename, stat.S_IRUSR | stat.S_IWUSR)
+
+	# Restore dummy passwords if needed
+	if HAS_KEYRING:
+		creds["password"] = passwords["password"]
+		creds["e_password"] = passwords["e_password"]
 
 def get_user_details():
 	"Get the user's details by whatever means neccessary."

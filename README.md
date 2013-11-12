@@ -9,6 +9,7 @@ The usyd website for checking results is cumbersome and slow. This script checks
 
 * [Python v2](http://www.python.org/getit/)
 * [Beautiful Soup 4](http://www.crummy.com/software/BeautifulSoup/bs4/doc/) and [Requests](http://docs.python-requests.org/en/latest/) (included)
+* [keyring](https://pypi.python.org/pypi/keyring) (optional) Required for more secure password management.
 * Cron (optional, Linux and OS X only)
 
 Mac & Linux users should have Python installed already, Windows users will have to [download it](http://python.org/ftp/python/2.7.5/python-2.7.5.msi). If you already have Beautiful Soup and Requests installed system-wide you can delete the `bs4` and `requests` folders that come bundled with usydrc.

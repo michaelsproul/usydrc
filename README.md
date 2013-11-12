@@ -3,7 +3,7 @@ USYD Exam Results Checker
 
 The usyd website for checking results is cumbersome and slow. This script checks the uni website for new results, and emails you when they finally come out.
 
-For now only Gmail accounts are supported. If you have a burning desire to use another email provider, send me a message at micsproul (at) gmail.com
+**Testers Wanted: If you have a non-Gmail, non-university email account, please let me know if this works for you.**
 
 ## Dependencies ##
 
@@ -28,6 +28,7 @@ The first time you run the script it requests your various login details and sto
 ```
 Uni: uni-key password
 Gmail: username password
+Server: address:port
 ```
 
 Once you have a `details.txt` file usydrc can check the uni website without you having to do anything. It's important that you always run usydrc from the folder where it's installed, so that it can access your `details.txt`.

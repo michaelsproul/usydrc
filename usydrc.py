@@ -44,7 +44,7 @@ def get_degree_id(username, password):
 		return None
 
 	soup = BeautifulSoup(r.text)
-	link = soup.find('a', href=re.compile("courseresults*"))
+	link = soup.find('a', href=re.compile(r"courseresults.*"))
 	if link == None:
 		return None
 	id = link['href'][-4:]
@@ -176,21 +176,35 @@ def write_results(results, new_marks_out, filename='results.txt'):
 	r_file.close()
 
 
-def email_results(username, password):
-	"Email the results to and from the Gmail account specified."
-	r_file = open('results.txt', 'r')
-	me = '%s@gmail.com' % username
+def get_mail_server(username):
+	"Guess a suitable SMTP server for a given email address."
+	domain = username.split('@')[1]
+	if domain == 'gmail.com':
+		return "smtp.gmail.com:587"
+	elif re.match(r"^yahoo.*", domain):
+		return "plus.smtp.mail.yahoo.com:465"
+	elif (re.match(r"^(live|hotmail|outlook)+.*", domain) or
+		domain == 'uni.sydney.edu.au'):
+		return "smtp.office365.com:587"
+	return None
 
-	msg = MIMEText(r_file.read())
-	r_file.close()
+
+def email_results(username, password, server_addr, test=False):
+	"Email the results to and from the email account specified."
+	if test:
+		msg = MIMEText("This is how your results will be delivered!")
+	else:
+		r_file = open('results.txt', 'r')
+		msg = MIMEText(r_file.read())
+		r_file.close()
 	msg['Subject'] = 'Exam results'
-	msg['From'] = me
-	msg['To'] = me
+	msg['From'] = username
+	msg['To'] = username
 
-	server = smtplib.SMTP('smtp.gmail.com:587')
+	server = smtplib.SMTP(server_addr)
 	server.starttls()
 	server.login(username, password)
-	server.sendmail(me, me, msg.as_string())
+	server.sendmail(username, username, msg.as_string())
 	server.quit()
 
 
@@ -210,13 +224,27 @@ def request_user_details():
 			break
 		print "\nError logging in... Please try again."
 
-	print "Gmail login details"
+	print "Email login details"
 	print "==================="
-	creds['g_username'] = raw_input("Username: ")
-	creds['g_username'] = creds['g_username'].split('@')[0]
-	creds['g_password'] = getpass("Password: ")
+	creds['e_username'] = raw_input("Email Address: ")
+	creds['e_password'] = getpass("Password: ")
 
+	# Sort out SMTP server business
+	server_addr = get_mail_server(creds['e_username'])
+	if server_addr == None:
+		print "Please enter the address & port of your SMTP server..."
+		print "If you have no idea, Google it/ask a friend."
+		server_addr = raw_input("Server [address:port]:  ")
+	creds["mailserver"] = server_addr
+
+	test = raw_input("Send a test email? [Y/n] ").lower()
+	if test in "yes":
+		print "Emailing..."
+		email_results(creds['e_username'], creds['e_password'],
+				creds['mailserver'], test=True)
+		print "Done! Check that it worked..."
 	return creds
+
 
 def read_user_details(filename='details.txt'):
 	"Obtain the user's details from disk."
@@ -228,6 +256,7 @@ def read_user_details(filename='details.txt'):
 	creds = {}
 	f = open(filename, 'r')
 
+	# Read USYD login details
 	line = f.readline().split()
 	creds['username'] = line[1]
 	creds['password'] = line[2]
@@ -236,9 +265,14 @@ def read_user_details(filename='details.txt'):
 	else:
 		creds['deg_id'] = int(line[3])
 
+	# Read email login details
 	line = f.readline().split()
-	creds['g_username'] = line[1]
-	creds['g_password'] = line[2]
+	creds['e_username'] = line[1]
+	creds['e_password'] = line[2]
+
+	# Read the SMTP server to use
+	line = f.readline().split()
+	creds['mailserver'] = line[1] if (line != "") else None
 
 	f.close()
 	return creds
@@ -249,8 +283,11 @@ def write_user_details(creds, filename='details.txt'):
 	f = open(filename, 'w')
 	line = "Uni: %(username)s %(password)s %(deg_id)d\n" % creds
 	f.write(line)
-	line = "Gmail: %(g_username)s %(g_password)s\n" % creds
+	line = "Email: %(e_username)s %(e_password)s\n" % creds
 	f.write(line)
+	if creds['mailserver'] != None:
+		line = "Server: %(mailserver)s\n" % creds
+		f.write(line)
 	f.close()
 
 	# Set file permissions so only the user can read & write
@@ -295,7 +332,8 @@ def main():
 	write_results(old_results, new_marks_out)
 	if new_marks_out:
 		print "New results are out! Emailing them now!"
-		email_results(creds['g_username'], creds['g_password'])
+		email_results(creds['e_username'], creds['e_password'],
+							creds['mailserver'])
 	print "Done."
 
 if __name__ == '__main__':

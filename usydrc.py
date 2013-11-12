@@ -263,32 +263,33 @@ def read_user_details(filename='details.txt'):
 	creds = {}
 	f = open(filename, 'r')
 
-	# Read USYD login details
+	# USYD username
 	line = f.readline().split()
 	creds['username'] = line[1]
 
-	# Usyd password
+	# USYD password
 	if HAS_KEYRING:
-		creds['password'] = keyring.get_password("usydrc", "usyd")
+		creds['password'] = keyring.get_password("usydrc", "unipass")
 	else:
 		creds['password'] = line[2]
 
+	# Degree ID
 	if len(line) < 4:
 		creds['deg_id'] = None
 	else:
 		creds['deg_id'] = int(line[3])
 
-	# Read email login details
+	# Email address
 	line = f.readline().split()
 	creds['e_username'] = line[1]
 
 	# Email password
 	if HAS_KEYRING:
-		creds['password'] = keyring.get_password("usydrc", "email")
+		creds['e_password'] = keyring.get_password("usydrc", "emailpass")
 	else:
 		creds['e_password'] = line[2]
 
-	# Read the SMTP server to use
+	# SMTP server
 	line = f.readline().split()
 	creds['mailserver'] = line[1] if (line != "") else None
 
@@ -302,10 +303,10 @@ def write_user_details(creds, filename='details.txt'):
 	# If we have keyring available, store the passwords securely then write
 	# dummy values to the file.
 	if HAS_KEYRING:
-		passwords = {"password":creds["password"],
-					"e_password":creds["e_password"]}
-		keyring.set_password("usydrc", "usyd",  creds["password"])
-		keyring.set_password("usydrc", "email", creds["e_password"])
+		passwords = {"password": creds["password"],
+				"e_password": creds["e_password"]}
+		keyring.set_password("usydrc", "unipass",  creds["password"])
+		keyring.set_password("usydrc", "emailpass", creds["e_password"])
 
 		# Set the dummy values
 		creds["password"] = "KEYRING"
@@ -324,10 +325,11 @@ def write_user_details(creds, filename='details.txt'):
 	# Set file permissions so only the user can read & write
 	os.chmod(filename, stat.S_IRUSR | stat.S_IWUSR)
 
-	# Restore dummy passwords if needed
+	# Restore actual passwords
 	if HAS_KEYRING:
 		creds["password"] = passwords["password"]
 		creds["e_password"] = passwords["e_password"]
+
 
 def get_user_details():
 	"Get the user's details by whatever means neccessary."

@@ -10,6 +10,8 @@ from datetime import date, datetime
 from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
 
+from getpass import getpass
+
 LOGIN_URL = "https://wasm.usyd.edu.au/login.cgi"
 DEG_ID_URL = "https://ssa.usyd.edu.au/ssa/examresults/courseselect.jsp"
 RESULTS_URL = "https://ssa.usyd.edu.au/ssa/examresults/courseresults.jsp"
@@ -199,7 +201,7 @@ def request_user_details():
 	creds = {}
 	while True:
 		creds['username'] = raw_input("Uni-key: ")
-		creds['password'] = raw_input("Password: ")
+		creds['password'] = getpass("Password: ")
 		print "Validating... "
 		deg_id = get_degree_id(creds['username'], creds['password'])
 		if deg_id != None:
@@ -212,7 +214,7 @@ def request_user_details():
 	print "==================="
 	creds['g_username'] = raw_input("Username: ")
 	creds['g_username'] = creds['g_username'].split('@')[0]
-	creds['g_password'] = raw_input("Password: ")
+	creds['g_password'] = getpass("Password: ")
 
 	return creds
 

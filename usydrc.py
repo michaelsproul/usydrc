@@ -3,13 +3,13 @@
 import os
 import re
 import smtplib
+import stat
 import bs4
 import requests
 
 from datetime import date, datetime
 from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
-
 from getpass import getpass
 
 LOGIN_URL = "https://wasm.usyd.edu.au/login.cgi"
@@ -93,9 +93,9 @@ def extract_results(page, semester=None):
 	"""
 	if semester == None:
 		semester = get_semester()
-	
+
 	# Find the block of most recent results
-	soup = BeautifulSoup(page)	
+	soup = BeautifulSoup(page)
 	result_block = soup.find_all(style=results_css)
 
 	if len(result_block) == 0:
@@ -163,12 +163,12 @@ def write_results(results, new_marks_out, filename='results.txt'):
 		if new_marks_out:
 			r_file.write("NEW ")
 		r_file.write("Marks are out!\n\n")
-		
+
 		for r in results:
 			result = "%(subject)s: %(grade)s, " % r
 			result += "%(mark)d\n" % r
 			r_file.write(result)
-		
+
 		r_file.write("\nCheck SSA for more details, ")
 		r_file.write("https://ssa.usyd.edu.au/ssa/\n")
 
@@ -220,9 +220,14 @@ def request_user_details():
 
 def read_user_details(filename='details.txt'):
 	"Obtain the user's details from disk."
+	# Check file permissions
+	p = stat.S_IMODE(os.stat(filename).st_mode)
+	if p != 0o600:
+		os.chmod(filename, stat.S_IRUSR | stat.S_IWUSR)
+
 	creds = {}
 	f = open(filename, 'r')
-	
+
 	line = f.readline().split()
 	creds['username'] = line[1]
 	creds['password'] = line[2]
@@ -230,7 +235,7 @@ def read_user_details(filename='details.txt'):
 		creds['deg_id'] = None
 	else:
 		creds['deg_id'] = int(line[3])
-	
+
 	line = f.readline().split()
 	creds['g_username'] = line[1]
 	creds['g_password'] = line[2]
@@ -247,6 +252,9 @@ def write_user_details(creds, filename='details.txt'):
 	line = "Gmail: %(g_username)s %(g_password)s\n" % creds
 	f.write(line)
 	f.close()
+
+	# Set file permissions so only the user can read & write
+	os.chmod(filename, stat.S_IRUSR | stat.S_IWUSR)
 
 def get_user_details():
 	"Get the user's details by whatever means neccessary."
@@ -281,7 +289,6 @@ def main():
 	new_marks_out = (len(interesting) != 0)
 
 	# Extend the set of old results to contain all results
-	# TODO: Handle *changes* in marks more elegantly
 	old_results.extend(interesting)
 
 	# Store the results and email if appropriate

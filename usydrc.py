@@ -54,7 +54,7 @@ def get_degree_id(username, password):
 	link = soup.find('a', href=re.compile(r"courseresults.*"))
 	if link == None:
 		return None
-	id = link.split('=');
+	id = link['href'].split('=')
 	return int(id[-1])
 
 
@@ -186,7 +186,7 @@ def write_results(results, new_marks_out, filename='results.txt'):
 def get_mail_server(username):
 	"Guess a suitable SMTP server for a given email address."
 	domain = username.split('@')[1]
-	if domain == 'gmail.com' || domain == 'jpcs.me':
+	if domain == 'gmail.com':
 		return "smtp.gmail.com:587"
 	elif re.match(r"^yahoo.*", domain):
 		return "plus.smtp.mail.yahoo.com:465"

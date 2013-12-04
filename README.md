@@ -52,6 +52,7 @@ To run the script automatically on Windows you can create a task using "Task Sch
 * [Michael Sproul](https://github.com/gnusouth)
 * [Jacqui Leykam](https://github.com/jqln-0)
 * [Denbeigh Stevens](https://github.com/denbeigh2000)
+* [James Cooper-Stanbury](https://github.com/JunkyJames)
 
 ## Bugs & Errors ##
 

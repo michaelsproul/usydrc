@@ -3,8 +3,6 @@ USYD Exam Results Checker
 
 The usyd website for checking results is cumbersome and slow. This script checks the uni website for new results, and emails you when they finally come out.
 
-**Testers Wanted: If you have a non-Gmail, non-university email account, please let me know if this works for you.**
-
 ## Dependencies ##
 
 * [Python v2](http://www.python.org/getit/)
@@ -19,7 +17,7 @@ If you're Python savvy, run `sudo pip2 install beautifulsoup4 requests keyring`.
 
 ## Installation ##
 
-Download the latest release from [here](https://github.com/gnusouth/usydrc/releases). You want the `usydrc.zip` file.
+Download the latest release from [here](https://github.com/gnusouth/usydrc/releases/latest). You want the `usydrc.zip` file.
 
 Extract this zip file somewhere safe; your Home or My Documents folder is recommended.
 
@@ -41,7 +39,7 @@ Run `crontab -e` to add a new rule. Something like:
 
 If you're not a vim-guru you may want to run `export EDITOR=nano` before you edit your crontab. To check that the entry has been added correctly, run `crontab -l`.
 
-I haven't test this (or indeed anything) on Mac, so you may want to check out `launchd` instead.
+I haven't tested this (or indeed anything) on Mac OS X, so you may want to check out `launchd` instead.
 
 ## Running Automatically (Windows) ##
 

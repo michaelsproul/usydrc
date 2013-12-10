@@ -26,7 +26,7 @@ RESULTS_URL = "https://ssa.usyd.edu.au/ssa/examresults/courseresults.jsp"
 LOGIN_DATA = {
 	'appRealm':'usyd',
 	'appID':'ssa-flexsis',
-	'Submit':'Log%20in',
+	'Submit':'Log in',
 	'destURL': ""
 }
 

@@ -67,7 +67,7 @@ class ResultParsingTest(unittest.TestCase):
 	def test_download_extract(self):
 		# This test only works if you have my login details...
 		page = get_results_page(creds['username'], creds['password'], creds['deg_id'])
-		results = extract_results(page, semester=1)
+		results = extract_results(page, semester=(2013, 1))
 		results.sort(key=lambda x: x['subject'])
 		self.assertEqual(self.results, results)
 

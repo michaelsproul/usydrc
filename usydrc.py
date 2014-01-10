@@ -30,11 +30,8 @@ LOGIN_DATA = {
 	'destURL': ""
 }
 
-# Typical results block CSS (the *only* means of identifying the results block...)
-results_css = "border-collapse: collapse; border: 1px #000065;width:100%; margin-top:0px; margin-bottom:5px; padding:2px;"
-
 def new_login_data(username, password, url):
-	"Create an HTTP data block for an authenticated request."
+	"""Create an HTTP data block for an authenticated request."""
 	data = {i: LOGIN_DATA[i] for i in LOGIN_DATA}
 	data['credential_0'] = username
 	data['credential_1'] = password
@@ -43,7 +40,7 @@ def new_login_data(username, password, url):
 
 
 def get_degree_id(username, password):
-	"Fetch the ID of the user's degree."
+	"""Fetch the ID of the user's degree."""
 	login_data = new_login_data(username, password, DEG_ID_URL)
 	r = requests.post(LOGIN_URL, data=login_data, allow_redirects=True)
 
@@ -59,7 +56,7 @@ def get_degree_id(username, password):
 
 
 def get_results_page(username, password, deg_id):
-	"Get the results page HTML."
+	"""Get the results page HTML."""
 	url = RESULTS_URL + "?degreeid=%d" % deg_id
 	login_data = new_login_data(username, password, url)
 	r = requests.post(LOGIN_URL, data=login_data, allow_redirects=True)
@@ -72,17 +69,29 @@ def get_results_page(username, password, deg_id):
 		r.raise_for_status()
 
 
-def get_semester():
-	"Work out whether to fetch results for semester 1 or 2."
+def guess_semester():
+	"""Guess the year and semester that the user wants results for.
+
+	Return value:
+	* Tuple of ints: (year, semester)
+	"""
+	current_year = date.today().year
 	month = date.today().month
-	if month >= 3 and month <= 8:
-		return 1
+	if month <= 5:
+		year = current_year - 1
+		semester = 2
+	elif month <= 10:
+		year = current_year
+		semester = 1
 	else:
-		return 2
+		year = current_year
+		semester = 2
+
+	return (year, semester)
 
 
 def diff_results(new, old):
-	"Compare two sets of results and extract interesting changes."
+	"""Compare two sets of results and extract interesting changes."""
 	interesting = []
 
 	# Look for unseen results
@@ -96,24 +105,39 @@ def diff_results(new, old):
 def extract_results(page, semester=None):
 	"""Extract a set of results from a downloaded SSA page.
 
-	The semester is guessed if none is provided.
+	Arguments:
+	* page: SSA webpage as a string, as returned by get_results_page()
+	* semester: Tuple with the year and the semester, e.g. (2013, 2)
 	"""
-	if semester == None:
-		semester = get_semester()
+	# Guess the semester if it isn't provided
+	if semester is None:
+		semester = guess_semester()
 
-	# Find the block of most recent results
+	# Unpack the semester tuple
+	year = semester[0]
+	semester = semester[1]
+
+	# Create a BeautifulSoup object to allow HTML parsing
 	soup = BeautifulSoup(page)
-	result_block = soup.find_all(style=results_css)
 
-	if len(result_block) == 0:
-		print "Is the SSA website down?"
-		return []
+	# Find the heading that precedes the year's results
+	year_heading = soup.find(text="Results for Academic Year: %d" % year)
 
-	result_block = result_block[semester - 1]
+	if year_heading is None:
+		print "Couldn't find results for year %d." % year
+		print "This could indicate a download error?"
 
-	if type(result_block) != bs4.element.Tag:
-		print "Error parsing results page."
-		return []
+	# Find the table that contains this heading
+	year_table = year_heading.find_parent("table")
+
+	# Find the semester block, which should be a sibling of the year block
+	def correct_semester(tag):
+		desired_text = "Semester %d" % semester
+		if tag.find(text=desired_text):
+			return True
+		return False
+
+	result_block = year_table.find_next_sibling(correct_semester)
 
 	# Get a list in the form [MATH, 2969, Graph Theory, 74.0, Credit..]
 	raw_results = result_block.find_all('td', 'instructions')
@@ -353,13 +377,12 @@ def get_user_details():
 
 def main():
 	creds = get_user_details()
+	semester = guess_semester()
 
-	print "Downloading the results page..."
+	print "Checking for %d semester %d results..." % semester
 	page = get_results_page(creds['username'], creds['password'], creds['deg_id'])
-
-	new_results = extract_results(page)
+	new_results = extract_results(page, semester)
 	old_results = read_results()
-
 	interesting = diff_results(new_results, old_results)
 	new_marks_out = (len(interesting) != 0)
 
@@ -372,7 +395,8 @@ def main():
 		print "New results are out! Emailing them now!"
 		email_results(creds['e_username'], creds['e_password'],
 							creds['mailserver'])
-	print "Done."
+	else:
+		print("No new results.")
 
 if __name__ == '__main__':
 	main()

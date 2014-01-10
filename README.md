@@ -13,7 +13,7 @@ The usyd website for checking results is cumbersome and slow. This script checks
 
 Mac & Linux users should have Python installed already, Windows users will have to [download it](http://python.org/ftp/python/2.7.6/python-2.7.6.msi).
 
-If you're Python savvy, run `sudo pip2 install beautifulsoup4 requests==2.0.1 keyring`.
+If you're Python savvy, run `sudo pip2 install beautifulsoup4 requests keyring`.
 
 ## Installation ##
 

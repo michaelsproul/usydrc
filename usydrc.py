@@ -125,7 +125,8 @@ def extract_results(page, semester=None):
 
 	if year_heading is None:
 		print "Couldn't find results for year %d." % year
-		print "This could indicate a download error?"
+		print "This could indicate a download error."
+		return []
 
 	# Find the table that contains this heading
 	year_table = year_heading.find_parent("table")
@@ -162,7 +163,7 @@ def extract_results(page, semester=None):
 
 
 def read_results(filename='results.txt'):
-	"Read a set of results from disk."
+	"""Read a set of results from disk."""
 	try:
 		results = []
 		r_file = open(filename, 'r')
@@ -184,7 +185,7 @@ def read_results(filename='results.txt'):
 
 
 def write_results(results, new_marks_out, filename='results.txt'):
-	"Write the results (or lack of results) to disk."
+	"""Write the results (or lack of results) to disk."""
 	time_stamp = datetime.now().strftime("%a %d/%m/%y at %I:%M%p")
 
 	r_file = open(filename, 'w')
@@ -208,7 +209,7 @@ def write_results(results, new_marks_out, filename='results.txt'):
 
 
 def get_mail_server(username):
-	"Guess a suitable SMTP server for a given email address."
+	"""Guess a suitable SMTP server for a given email address."""
 	domain = username.split('@')[1]
 	if domain == 'gmail.com':
 		return "smtp.gmail.com:587"
@@ -221,7 +222,7 @@ def get_mail_server(username):
 
 
 def email_results(username, password, server_addr, test=False):
-	"Email the results to and from the email account specified."
+	"""Email the results to and from the email account specified."""
 	if test:
 		msg = MIMEText("This is how your results will be delivered!")
 	else:
@@ -240,7 +241,7 @@ def email_results(username, password, server_addr, test=False):
 
 
 def request_user_details():
-	"Prompt the user to provide their details via the commandline."
+	"""Prompt the user to provide their details via the commandline."""
 	print "Sydney Uni login details"
 	print "========================"
 	creds = {}
@@ -278,7 +279,7 @@ def request_user_details():
 
 
 def read_user_details(filename='details.txt'):
-	"Obtain the user's details from disk."
+	"""Obtain the user's details from disk."""
 	# Check file permissions
 	p = stat.S_IMODE(os.stat(filename).st_mode)
 	if p != 0o600:
@@ -322,7 +323,7 @@ def read_user_details(filename='details.txt'):
 
 
 def write_user_details(creds, filename='details.txt'):
-	"Write the user's details to disk."
+	"""Write the user's details to disk."""
 
 	# If we have keyring available, store the passwords securely then write
 	# dummy values to the file.
@@ -356,7 +357,7 @@ def write_user_details(creds, filename='details.txt'):
 
 
 def get_user_details():
-	"Get the user's details by whatever means neccessary."
+	"""Get the user's details by whatever means neccessary."""
 	if os.path.isfile("details.txt"):
 		creds = read_user_details()
 

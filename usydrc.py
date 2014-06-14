@@ -1,10 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 import os
 import re
-import smtplib
-import stat
+import sys
 import bs4
+import stat
+import smtplib
 import requests
 
 HAS_KEYRING = False
@@ -12,21 +13,25 @@ try:
 	import keyring
 	HAS_KEYRING = True
 except ImportError:
-	print "Warning: falling back to insecure password storage."
+	print("Warning: falling back to insecure password storage.")
 
 from datetime import date, datetime
 from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
 from getpass import getpass
 
+# Override Python 2's input (is this wrong?)
+if sys.version_info.major < 3:
+	input = raw_input
+
 LOGIN_URL = "https://wasm.usyd.edu.au/login.cgi"
 DEG_ID_URL = "https://ssa.usyd.edu.au/ssa/examresults/courseselect.jsp"
 RESULTS_URL = "https://ssa.usyd.edu.au/ssa/examresults/courseresults.jsp"
 
 LOGIN_DATA = {
-	'appRealm':'usyd',
-	'appID':'ssa-flexsis',
-	'Submit':'Log in',
+	'appRealm': 'usyd',
+	'appID': 'ssa-flexsis',
+	'Submit': 'Log in',
 	'destURL': ""
 }
 
@@ -57,15 +62,15 @@ def get_degree_id(username, password):
 
 def get_results_page(username, password, deg_id):
 	"""Get the results page HTML."""
-	url = RESULTS_URL + "?degreeid=%d" % deg_id
+	url = RESULTS_URL + "?degreeid={:d}".format(deg_id)
 	login_data = new_login_data(username, password, url)
-	r = requests.post(LOGIN_URL, data=login_data, allow_redirects=True)
+	r = requests.post(LOGIN_URL, data=login_data, allow_redirects=True, timeout=5)
 
 	if r.status_code < 400:
 		return r.text
 	else:
-		print "Error fetching results, try deleting your details file."
-		print "If that doesn't work, check whether the results web page is down."
+		print("Error fetching results, try deleting your details file.")
+		print("If that doesn't work, check whether the results web page is down.")
 		r.raise_for_status()
 
 
@@ -114,18 +119,17 @@ def extract_results(page, semester=None):
 		semester = guess_semester()
 
 	# Unpack the semester tuple
-	year = semester[0]
-	semester = semester[1]
+	year, semester = semester
 
 	# Create a BeautifulSoup object to allow HTML parsing
 	soup = BeautifulSoup(page)
 
 	# Find the heading that precedes the year's results
-	year_heading = soup.find(text="Results for Academic Year: %d" % year)
+	year_heading = soup.find(text="Results for Academic Year: {:d}".format(year))
 
 	if year_heading is None:
-		print "Couldn't find results for year %d." % year
-		print "This could indicate a download error."
+		print("Couldn't find results for year {:d}.".format(year))
+		print("This could indicate a download error.")
 		return []
 
 	# Find the table that contains this heading
@@ -133,7 +137,7 @@ def extract_results(page, semester=None):
 
 	# Find the semester block, which should be a sibling of the year block
 	def correct_semester(tag):
-		desired_text = "Semester %d" % semester
+		desired_text = "Semester {:d}".format(semester)
 		if tag.find(text=desired_text):
 			return True
 		return False
@@ -197,14 +201,13 @@ def write_results(results, new_marks_out, filename='results.txt'):
 		r_file.write("Marks are out!\n\n")
 
 		for r in results:
-			result = "%(subject)s: %(grade)s, " % r
-			result += "%(mark)d\n" % r
+			result = "{subject}: {grade}, {mark:d}".format(**r)
 			r_file.write(result)
 
 		r_file.write("\nCheck SSA for more details, ")
 		r_file.write("https://ssa.usyd.edu.au/ssa/\n")
 
-	r_file.write("\nLast checked on " + time_stamp + "\n")
+	r_file.write("\nLast checked on {}\n".format(time_stamp))
 	r_file.close()
 
 
@@ -242,39 +245,39 @@ def email_results(username, password, server_addr, test=False):
 
 def request_user_details():
 	"""Prompt the user to provide their details via the commandline."""
-	print "Sydney Uni login details"
-	print "========================"
+	print("Sydney Uni login details")
+	print("========================")
 	creds = {}
 	while True:
-		creds['username'] = raw_input("Uni-key: ")
+		creds['username'] = input("Uni-key: ")
 		creds['password'] = getpass("Password: ")
-		print "Validating... "
+		print("Validating... ")
 		deg_id = get_degree_id(creds['username'], creds['password'])
 		if deg_id != None:
 			creds["deg_id"] = deg_id
-			print "Done!"
+			print("Done!")
 			break
-		print "\nError logging in... Please try again."
+		print("\nError logging in... Please try again.")
 
-	print "Email login details"
-	print "==================="
-	creds['e_username'] = raw_input("Email Address: ")
+	print("Email login details")
+	print("===================")
+	creds['e_username'] = input("Email Address: ")
 	creds['e_password'] = getpass("Password: ")
 
 	# Sort out SMTP server business
 	server_addr = get_mail_server(creds['e_username'])
 	if server_addr == None:
-		print "Please enter the address & port of your SMTP server..."
-		print "If you have no idea, Google it/ask a friend."
-		server_addr = raw_input("Server [address:port]:  ")
+		print("Please enter the address & port of your SMTP server...")
+		print("If you have no idea, Google it/ask a friend.")
+		server_addr = input("Server [address:port]:  ")
 	creds["mailserver"] = server_addr
 
-	test = raw_input("Send a test email? [Y/n] ").lower()
+	test = input("Send a test email? [Y/n] ").lower()
 	if test in "yes":
-		print "Emailing..."
+		print("Emailing...")
 		email_results(creds['e_username'], creds['e_password'],
 				creds['mailserver'], test=True)
-		print "Done! Check that it worked..."
+		print("Done! Check that it worked...")
 	return creds
 
 
@@ -328,8 +331,7 @@ def write_user_details(creds, filename='details.txt'):
 	# If we have keyring available, store the passwords securely then write
 	# dummy values to the file.
 	if HAS_KEYRING:
-		passwords = {"password": creds["password"],
-				"e_password": creds["e_password"]}
+		passwords = {"password": creds["password"], "e_password": creds["e_password"]}
 		keyring.set_password("usydrc", "unipass",  creds["password"])
 		keyring.set_password("usydrc", "emailpass", creds["e_password"])
 
@@ -338,12 +340,12 @@ def write_user_details(creds, filename='details.txt'):
 		creds["e_password"] = "KEYRING"
 
 	f = open(filename, 'w')
-	line = "Uni: %(username)s %(password)s %(deg_id)d\n" % creds
+	line = "Uni: {username} {password} {deg_id:d}\n".format(**creds)
 	f.write(line)
-	line = "Email: %(e_username)s %(e_password)s\n" % creds
+	line = "Email: {e_username} {e_password}\n".format(**creds)
 	f.write(line)
 	if creds['mailserver'] != None:
-		line = "Server: %(mailserver)s\n" % creds
+		line = "Server: {mailserver}\n".format(**creds)
 		f.write(line)
 	f.close()
 
@@ -363,10 +365,10 @@ def get_user_details():
 
 		# Find degree id if missing
 		if creds['deg_id'] == None:
-			print "Working out what degree you're in..."
+			print("Working out what degree you're in...")
 			deg_id = get_degree_id(creds['username'], creds['password'])
 			if deg_id == None:
-				print "Authentication Failure! Delete details.txt"
+				print("Authentication Failure! Delete details.txt")
 				os.exit(1)
 			creds['deg_id'] = deg_id
 			write_user_details(creds)
@@ -380,7 +382,7 @@ def main():
 	creds = get_user_details()
 	semester = guess_semester()
 
-	print "Checking for %d semester %d results..." % semester
+	print("Checking for {} semester {} results...".format(*semester))
 	page = get_results_page(creds['username'], creds['password'], creds['deg_id'])
 	new_results = extract_results(page, semester)
 	old_results = read_results()
@@ -393,9 +395,8 @@ def main():
 	# Store the results and email if appropriate
 	write_results(old_results, new_marks_out)
 	if new_marks_out:
-		print "New results are out! Emailing them now!"
-		email_results(creds['e_username'], creds['e_password'],
-							creds['mailserver'])
+		print("New results are out! Emailing them now!")
+		email_results(creds['e_username'], creds['e_password'], creds['mailserver'])
 	else:
 		print("No new results.")
 

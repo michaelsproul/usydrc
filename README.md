@@ -1,19 +1,19 @@
 USYD Exam Results Checker
-=========================================
+=========================
 
 The usyd website for checking results is cumbersome and slow. This script checks the uni website for new results, and emails you when they finally come out.
 
 ## Dependencies ##
 
-* [Python v2](http://www.python.org/getit/)
+* [Python (preferably version 3)](http://www.python.org/getit/)
 * [Beautiful Soup 4](http://www.crummy.com/software/BeautifulSoup/bs4/doc/) (included)
 * [Requests](http://docs.python-requests.org/en/latest/) (included)
 * [Keyring](https://pypi.python.org/pypi/keyring) (included, optional) Required for more secure password management.
 * Cron (optional, Linux and OS X only)
 
-Mac & Linux users should have Python installed already, Windows users will have to [download it](http://python.org/ftp/python/2.7.6/python-2.7.6.msi).
+Mac & Linux users should have Python installed already, Windows users will have to [download it](https://www.python.org/ftp/python/3.4.1/python-3.4.1.msi).
 
-If you're Python savvy, run `sudo pip2 install beautifulsoup4 requests keyring`.
+If you're Python savvy, run `sudo pip install beautifulsoup4 requests keyring`.
 
 ## Installation ##
 
@@ -47,10 +47,10 @@ To run the script automatically on Windows you can create a task using "Task Sch
 
 ## Contributors
 
-* [Michael Sproul](https://github.com/gnusouth)
+* [Michael Sproul](https://github.com/michaelsproul)
 * [Jacqui Leykam](https://github.com/jqln-0)
 * [Denbeigh Stevens](https://github.com/denbeigh2000)
-* [James Cooper-Stanbury](https://github.com/JunkyJames)
+* [James Cooper-Stanbury](https://github.com/thatjpcsguy)
 
 ## Bugs & Errors ##
 

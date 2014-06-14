@@ -149,8 +149,8 @@ def extract_results(page, semester=None):
 
 	# Convert each subject into a sensible dictionary
 	results = []
-	nsubjects = len(raw_results)//5
-	for i in xrange(nsubjects):
+	nsubjects = len(raw_results) // 5
+	for i in range(nsubjects):
 		result = {}
 		result["subject"] = raw_results[5*i].string
 		result["subject"] += raw_results[5*i + 1].string
@@ -201,7 +201,7 @@ def write_results(results, new_marks_out, filename='results.txt'):
 		r_file.write("Marks are out!\n\n")
 
 		for r in results:
-			result = "{subject}: {grade}, {mark:d}".format(**r)
+			result = "{subject}: {grade}, {mark:d}\n".format(**r)
 			r_file.write(result)
 
 		r_file.write("\nCheck SSA for more details, ")
